@@ -8,5 +8,3 @@ Contains:
 - TitleAPI
 - (?)HoloAPI(?)
 - Simple methods listening packets based on Bukkit Event (e.g StatusServerAPI)
-
-![ScreenShot](https://slack-files.com/T0JL7LQJD-F0RUC97S8-eba2f603e6)
