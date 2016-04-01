@@ -5,11 +5,16 @@ import com.gmail.zahusek.tinyprotocolapi.wrapper.WrapperChat;
 
 public class PacketChat extends Packet {
 	
-	private final static ClassAccess fa = new ClassAccess("{nms}.PacketPlayOutChat");
+	private final static ClassAccess access = new ClassAccess("{nms}.PacketPlayOutChat");
 	
 	public PacketChat(Object ichat, byte type) 
-	{ super(fa.newInstance(2, ichat, type)); }
+	{ super(2, ichat, type); }
 	
 	public PacketChat(String chat, byte type) 
-	{ super(fa.newInstance(2, WrapperChat.toIChat(chat), type)); }
+	{ super(2, WrapperChat.toIChat(chat), type); }
+
+	@Override
+	public ClassAccess access() {
+		return access;
+	}
 }

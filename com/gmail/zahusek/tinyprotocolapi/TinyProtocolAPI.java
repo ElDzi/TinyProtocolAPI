@@ -2,8 +2,10 @@ package com.gmail.zahusek.tinyprotocolapi;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -17,17 +19,15 @@ import org.apache.commons.io.FileUtils;
 import org.bukkit.ChatColor;
 import org.bukkit.GameMode;
 import org.bukkit.entity.Player;
-import org.bukkit.event.HandlerList;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
-import org.fusesource.jansi.Ansi;
-import org.fusesource.jansi.Ansi.Color;
 
+import com.avaje.ebeaninternal.server.lib.util.NotFoundException;
 import com.gmail.zahusek.tinyprotocolapi.api.Preference;
 import com.gmail.zahusek.tinyprotocolapi.api.tab.TabAPI;
-import com.gmail.zahusek.tinyprotocolapi.api.tab.TabMap;
+import com.gmail.zahusek.tinyprotocolapi.api.tab.TabListener;
 import com.gmail.zahusek.tinyprotocolapi.api.title.TitleAPI;
 import com.gmail.zahusek.tinyprotocolapi.asm.reflection.ClassAccess;
 import com.gmail.zahusek.tinyprotocolapi.listener.PacketEvent;
@@ -45,40 +45,81 @@ public class TinyProtocolAPI extends JavaPlugin
 {
 	public static void main(String[] args) 
 	{
-		long s = System.nanoTime();
-		for(int i = 0; i < 1000000; i++);
-		long e = System.nanoTime();
-		System.out.println(e-s);
+//		long s = System.nanoTime();
+//		for(int i = 0; i < 1000000; i++);
+//		long e = System.nanoTime();
+//		System.out.println(e-s);
 	}
 	
-	private final int fa = ma(getBukkitVersion());//1.8.4 /*13*/
-	private final Ansi fb = Ansi.ansi();
-	private final String fc = fb.a(Ansi.Attribute.RESET).toString();
-	private static TinyProtocol fd;
-	private Properties fe;
-	private final String ff = "Settings.properties";
+	private static TinyProtocolAPI plugin;
+	private static TinyProtocol manager;
+	private static Properties properties;
+	private final String config = "Settings.properties";
 	
 	@Override
 	public void onEnable()
 	{
 		PluginManager a = getServer().getPluginManager();
-		va(Color.YELLOW, "Checking version of engine...");
-		if(fa < 13)
+		if(!compatible())
 		{ 
-            va(Color.RED, "Unexpected problem: Your version of engine is not compatible with TinyProtocolAPI");
+            log("&cUnexpected problem: Your version of engine is not compatible with TinyProtocolAPI");
             a.disablePlugin(this);
             return;
 		}
-		va(Color.GREEN, "Done.\n");
 		
-		fe = new Properties();
-		vb();
-		fd = new TinyProtocol();
-		a.registerEvents(new TabMap(), this);
-		GameMode b = getServer().getDefaultGameMode();
-		ChatColor[] c = ChatColor.values();
-		Random d = new Random();
-		if(fe.getProperty("testmode", "false").equals("true"))
+		properties = new Properties();
+		
+		File b = getDataFolder();
+		if(!b.exists()) b.mkdirs();
+		File c = new File(b, config);
+		if(!c.exists())
+		{
+			InputStream d = getResource(config);
+			try {
+				FileUtils.copyInputStreamToFile(d, c);
+			} catch (IOException e) {
+				try {
+					properties.load(d);
+				} catch (IOException e1) {
+					log("&cUnexpected problem: TinyProtocolAPI could not loaded default file - Where is Settings.properties ? ;o");
+					a.disablePlugin(this);
+					return;
+				}
+				log("&cUnexpected problem: Java encountered a problem when copying a file - &cused default file");
+			}
+			finally 
+			{
+				try { d.close();
+				} catch (IOException e) {}
+			}
+		}
+				
+		FileInputStream e = null;
+		try {
+			e = new FileInputStream(c);
+			properties.load(e);
+		} catch (FileNotFoundException z) {
+			throw new NotFoundException("File " + config + " is not exist !");
+		} catch (IOException z) {
+			log("&cUnexpected problem: TinyProtocolAPI could not loaded default file - Where is Settings.properties ? ;o");
+			a.disablePlugin(this);
+			return;
+		}
+		finally
+		{
+			try { e.close();
+			} catch (IOException e1) {}
+		}
+			
+		manager = new TinyProtocol();
+		plugin = getPlugin(TinyProtocolAPI.class);
+		
+		a.registerEvents(new TabListener(), this);
+		
+		GameMode f = getServer().getDefaultGameMode();
+		ChatColor[] g = ChatColor.values();
+		Random h = new Random();
+		if(getProperties().getProperty("testmode", "false").equals("true"))
 		{
 			new BukkitRunnable() 
 			{
@@ -87,9 +128,9 @@ public class TinyProtocolAPI extends JavaPlugin
 				public void run() {
 					for(Player a : getServer().getOnlinePlayers())
 					{
-						if(a.isOp() || a.isWhitelisted() || (a.getGameMode() != b && b == GameMode.CREATIVE))
+						if(a.isOp() || a.isWhitelisted() || (a.getGameMode() != f && f == GameMode.CREATIVE))
 						{
-							TitleAPI.broadcast(a, "§eBETA §bTinyProtocolAPI §54.0", c[d.nextInt(c.length)] 
+							TitleAPI.broadcast(a, "§eBETA §bTinyProtocolAPI §54.0", g[h.nextInt(g.length)] 
 									+ "It is test mode !", 20*5, 20*5, 20*5);
 							TabAPI.refresh(TinyProtocolAPI.class, a, Preference.LOW, holder ->
 							{
@@ -105,7 +146,7 @@ public class TinyProtocolAPI extends JavaPlugin
 									{
 										if(y%2 == 0)
 											holder.setMessage(x, x%2 == 0 ? y : y+1, 
-													c[d.nextInt(c.length)] + "It is test mode !");
+													g[h.nextInt(g.length)] + "It is test mode !");
 									}
 								}
 							});
@@ -118,140 +159,98 @@ public class TinyProtocolAPI extends JavaPlugin
 	
 	@Override
 	public void onDisable() {
-		fd.close();
-		HandlerList.unregisterAll(fd);
+		manager.close();
 	}
 	
 	public static TinyProtocol getTinyProtocol()
-	{
-		return fd;
-	}
+	{ return manager; }
 	
-	public void va(Color a, String b)
-	{
-		switch (a) {
-			case RED:
-				getLogger().warning(fb.fg(a).toString() + b + fc);
-				break;
-			default :
-				getLogger().info(fb.fg(a).toString() + b + fc);
-				break;
-		}
-	}
+	public static TinyProtocolAPI getTinyProtocolAPI()
+	{ return plugin; }
 	
-	void vb()
-	{
-		File b = getDataFolder();
-		if(!b.exists())
-			b.mkdirs();
-		File c = new File(b, ff);
-		if(!c.exists())
-		{
-			InputStream d = getResource(ff);
-			try {
-				FileUtils.copyInputStreamToFile(d, c);
-			} catch (IOException e) {
-				e.printStackTrace();
-				va(Color.RED, "Unexpected problem: " + ff + " will is not copied");
-				return;
-			}
-			finally
-			{
-				if(d != null)
-				{
-					try {
-						d.close();
-					} catch (IOException e) {
-						e.printStackTrace();
-					}
-				}
-			}
-		}
-			
-		FileInputStream e = null;
-		try { 
-			fe.load(e = new FileInputStream(c));
-		} catch (IOException e1) {
-			e1.printStackTrace();
-			va(Color.RED, "Unexpected problem: " + ff +" is not loaded");
-			return;
-		}
-		finally 
-		{
-			if(c != null)
-			{
-				try 
-				{
-					e.close();
-				}
-				catch (IOException e1)
-				{
-					e1.printStackTrace();
-				}
-			}
-		}
-	}
+	private static Properties getProperties()
+	{ return properties; }
 	
-	int ma(String a)
+	
+	boolean compatible()
 	{
-		int b = 0;
-		c:for(char d : a.toCharArray())
+		int a = 0, b = 0, c = 0;
+		e:for(char h : getBukkitVersion().toCharArray())
 		{
-			switch(d)
+			switch(h)
 			{
 				case '-': 
-					break c;
+					break e;
 				case '.':
-				case '0': 
+					a++;
 					break;
 				default:
-					b += (d + 2) % 10;
-					break ;
+					if(a == 1)
+						b += (h + 2) % 10;
+					else if(a == 2)
+						c += (h + 2) % 10;
+					else 
+						break;
 			}
 		}
-		return b;
+		if(b < 8) 
+			return false;
+		if(b == 8 && c < 4)
+			return false;
+		return true;
+	}
+    
+    protected void log(String a)
+    {
+    	a = ChatColor.translateAlternateColorCodes('&', a);
+    	getServer().getConsoleSender().sendMessage(a);}
+    
+    static Map<Class<?>, Set<RegisteredPacket>> registered(PacketListener a, Plugin b) {
+		Map<Class<?>, Set<RegisteredPacket>> c = Maps.newHashMap();
+
+		for (Method d : a.getClass().getDeclaredMethods()) {
+			PacketHandler e = d.getAnnotation(PacketHandler.class);
+			if (e == null
+					|| d.getParameterTypes().length != 1
+					|| !PacketEvent.class.isAssignableFrom(d
+							.getParameterTypes()[0]))
+				continue;
+			Class<?> f = d.getParameterTypes()[0].asSubclass(PacketEvent.class);
+			PacketID g = f.getAnnotation(PacketID.class);
+			if (g == null)
+				continue;
+			d.setAccessible(true);
+			if (!c.containsKey(f))
+				c.put(f, new HashSet<RegisteredPacket>());
+
+			PacketExecutor h = new PacketExecutor() {
+				@Override
+				public void call(PacketListener a, PacketEvent b) {
+					try {
+						d.invoke(a, b);
+					} catch (IllegalAccessException e) {
+						throw new RuntimeException(e);
+					} catch (IllegalArgumentException e) {
+						throw new IllegalArgumentException(e);
+					} catch (InvocationTargetException e) {
+						throw new RuntimeException(e);
+					}
+				}
+			};
+			c.get(f).add(
+					new RegisteredPacket(g.id(), a, h, e.priority(), b, e
+							.ignoreCancelled(), new ClassAccess(f)));
+		}
+		return c;
 	}
 	
-    static Map<Class<?>, Set<RegisteredPacket>> mb(PacketListener a, Plugin b)
-    {
-        Map<Class<?>, Set<RegisteredPacket>> c = Maps.newHashMap();
-       
-        for (Method d : a.getClass().getDeclaredMethods())
-        {
-            PacketHandler e = d.getAnnotation(PacketHandler.class);
-            if (e == null || d.getParameterTypes().length != 1 || !PacketEvent.class.isAssignableFrom(d.getParameterTypes()[0]))
-                continue;
-            Class<?> f = d.getParameterTypes()[0].asSubclass(PacketEvent.class);
-            PacketID g = f.getAnnotation(PacketID.class);
-            if (g == null) 
-            	continue;
-            
-            if (!c.containsKey(f)) 
-            	c.put(f, new HashSet<RegisteredPacket>());
-
-            PacketExecutor h = new PacketExecutor()
-            {
-                public void a (PacketListener a, PacketEvent b)
-                {
-                    try
-                    {d.invoke(a, b);} 
-                    catch (Exception e)
-                    {e.printStackTrace();}
-                }
-            };
-            c.get(f).add(new RegisteredPacket(g.id(), a, h, e.priority(), b, e.ignoreCancelled()));
-        }
-        return c;
-    }
-
-    public static void registerPackets (PacketListener a, Plugin b)
-    {
-        if (!b.isEnabled()) return;
-        for (Entry<Class<?>, Set<RegisteredPacket>> c : mb(a, b).entrySet())
-        {
-        	PacketHandlerList d = new ClassAccess(c.getKey()).get(null, PacketHandlerList.class, 0);
-        	d.registerAll(c.getValue());
-        }
-    }
-    
+	public static void registerPackets(PacketListener listener, Plugin plugin) {
+		if (!plugin.isEnabled())
+			return;
+		for (Entry<Class<?>, Set<RegisteredPacket>> c : registered(listener, plugin).entrySet()) {
+			PacketHandlerList d = new ClassAccess(c.getKey()).get(null, PacketHandlerList.class, 0);
+			if (d == null) continue;
+			d.registerAll(c.getValue());
+		}
+	}
 }

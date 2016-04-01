@@ -22,7 +22,7 @@ public class PacketHandlerList
         {allLists.add(this);}
     }
 
-    public static void unregisterAll ()
+   	protected static void unregisterAll ()
     {
         synchronized (allLists)
         {
@@ -91,13 +91,16 @@ public class PacketHandlerList
         }
     }
     
-	public static ArrayList<RegisteredPacket> getAllRegisteredPacketListeners ()
+	public static RegisteredPacket[] getAllRegisteredPacketListeners ()
     {
-        ArrayList<RegisteredPacket> listeners = Lists.newArrayList();
+		int size = allLists.size();
+        RegisteredPacket[] listeners = new RegisteredPacket[size];
         synchronized (allLists)
         {
+        	int i = 0;
             for (PacketHandlerList handler : allLists)
-                listeners.addAll(Arrays.asList(handler.getRegisteredPacketListeners()));
+                for(RegisteredPacket packet : handler.getRegisteredPacketListeners())
+                	listeners[i++] = packet;
         }
         return listeners;
     }

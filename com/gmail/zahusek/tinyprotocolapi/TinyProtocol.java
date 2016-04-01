@@ -10,13 +10,12 @@ import com.google.common.collect.MapMaker;
 
 import io.netty.channel.*;
 
-import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.scheduler.BukkitRunnable;
-import org.fusesource.jansi.Ansi.Color;
 
 import java.util.Collection;
 import java.util.List;
@@ -27,7 +26,8 @@ import java.util.UUID;
 import static com.google.common.collect.Lists.newArrayList;
 import static org.bukkit.plugin.java.JavaPlugin.getPlugin;
 
-public class TinyProtocol implements Listener {
+public class TinyProtocol implements Listener 
+{
 
 	private final ClassAccess CRAFTPLAYER = new ClassAccess(
 			"{obc}.entity.CraftPlayer");
@@ -57,21 +57,20 @@ public class TinyProtocol implements Listener {
 	private ChannelInitializer<Channel> beginInitProtocol;
 	private ChannelInitializer<Channel> endInitProtocol;
 	
-	private String handler = "TinyProtocol";
+	private final String handler = "TinyProtocol";
 
 	public TinyProtocol() {
 		try {
 			registerChannelHandler();
 			registerPlayers();
 		} catch (IllegalArgumentException ex) {
-			plugin.va(Color.YELLOW, "[TinyProtocol] Delaying server channel injection due to late bind.");
+			plugin.log("&e[TinyProtocol] Delaying server channel injection due to late bind.");
 			new BukkitRunnable() {
 				@Override
 				public void run() {
 					registerChannelHandler();
 					registerPlayers();
-					plugin.va(Color.YELLOW,
-							"[TinyProtocol] Late bind injection successful.");
+					plugin.log("&e[TinyProtocol] Late bind injection successful.");
 				}
 			}.runTask(plugin);
 		}
@@ -91,7 +90,7 @@ public class TinyProtocol implements Listener {
 						injectChannelInternal(a);
 					}
 				} catch (Exception e) {
-					plugin.va(Color.RED, "Cannot inject incomming channel " + a);
+					plugin.log("&c[TinyProtocol] Cannot inject incomming channel " + a);
 				}
 			}
 		};
@@ -117,7 +116,7 @@ public class TinyProtocol implements Listener {
 
 	@SuppressWarnings("unchecked")
 	private void registerChannelHandler() {
-		Object a = CRAFTSERVER.get(Bukkit.getServer(), MINECRAFTSERVER.getUsedClass(),
+		Object a = CRAFTSERVER.get(plugin.getServer(), MINECRAFTSERVER.getUsedClass(),
 				0);
 		Object b = MINECRAFTSERVER.get(a, SERVERCONNECTION.getUsedClass(), 0);
 
@@ -152,60 +151,82 @@ public class TinyProtocol implements Listener {
 		});
 	}
 	
+	@Deprecated
 	public void sendAbstractPacket(Player player, Collection<Packet> packets) {
 		sendAbstractPacket(player, packets.toArray(new Packet[packets.size()]));
 	}
 	
-	public void sendAbstractPacket(Player player, Packet... packets) {
-		ChannelPipeline a = getChannel(player).pipeline();
-		for (Packet b : packets)
-			a.writeAndFlush(b.getHandle());
-	}
-
+	@Deprecated
 	public void sendPacket(Player player, Collection<Object> packets) {
 		ChannelPipeline a = getChannel(player).pipeline();
 		for (Object b : packets)
 			a.writeAndFlush(b);
 	}
 	
-	public void sendPacket(Player player, Object... packets) {
-		ChannelPipeline a = getChannel(player).pipeline();
-		for (Object b : packets)
-			a.writeAndFlush(b);
+	public void sendAbstractPacket(Player player, Packet... packets) {
+		sendAbstractPacket(getChannel(player), packets);
 	}
 	
+	public void sendAbstractPacket(Channel channel, Packet... packets) {
+		int a = packets.length;
+		Object[] b = new Object[a];
+		for(int i = 0; i < a; i++)
+			b[i] = packets[i].getHandle();
+		sendPacket(channel, b);
+	}
+	
+	public void sendPacket(Player player, Object... packets) {
+		sendPacket(getChannel(player), packets);
+	}
+	
+	public void sendPacket(Channel channel, Object... packets) {
+		ChannelPipeline a = channel.pipeline();
+		for (Object b : packets) a.write(b);
+		a.flush();
+	}
+	
+	@Deprecated
 	public void receiveAbstractPacket(Player player, Collection<Packet> packets) {
 		receiveAbstractPacket(player, packets.toArray(new Packet[packets.size()]));
 	}
 	
-	public void receiveAbstractPacket(Player player, Packet... packets) {
-		ChannelHandlerContext a = getChannel(player).pipeline().context(
-				"encoder");
-		for (Packet b : packets)
-			a.fireChannelRead(b.getHandle());
+	@Deprecated
+	public void receivePacket(Player player, Collection<Object> packets) 
+	{
+		ChannelHandlerContext a = getChannel(player).pipeline().context("encoder");
+		for (Object b : packets) a.fireChannelRead(b);
 	}
 	
-	public void receivePacket(Player player, Collection<Object> packets) {
-		ChannelHandlerContext a = getChannel(player).pipeline().context("encoder");
-		for (Object b : packets)
-			a.fireChannelRead(b);
+	public void receiveAbstractPacket(Player player, Packet... packets) {
+		receiveAbstractPacket(getChannel(player), packets);
 	}
+	
+	
+	public void receiveAbstractPacket(Channel channel, Packet... packets) {
+		int a = packets.length;
+		Object[] b = new Object[a];
+		for(int i = 0; i < a; i++)
+			b[i] = packets[i].getHandle();
+		receivePacket(channel, b);
+	}
+	
+	public void receivePacket(Player player, Object... packets) 
+	{receivePacket(getChannel(player), packets);}
 
-	public void receivePacket(Player player, Object... packets) {
-		ChannelHandlerContext a = getChannel(player).pipeline().context("encoder");
-		for (Object b : packets)
-			a.fireChannelRead(b);
+	public void receivePacket(Channel channel, Object... packets) {
+		ChannelHandlerContext a = channel.pipeline().context("encoder");
+		for (Object b : packets) a.fireChannelRead(b);
 	}
 
 	void injectPlayer(Player a) {
-		UUID b = a.getUniqueId();
-		Object c = ENTITYPLAYER.get(CRAFTPLAYER.invoke(a, "getHandle"),"playerConnection");
+		Object b = CRAFTPLAYER.invoke(a, "getHandle");
+		Object c = ENTITYPLAYER.get(b, "playerConnection");
 		Object d = PLAYERCONNECTION.get(c, "networkManager");
 		Channel e = NETWORKMANAGER.get(d, "channel");
 		ChannelPipeline f = e.pipeline();
 		if (f.get(handler) == null)
-			f.addBefore("packet_handler", handler,new PacketInterceptor());
-		channelLookup.put(b, e);
+			f.addBefore("packet_handler", handler, new PacketInterceptor());
+		channelLookup.put(a.getUniqueId(), e);
 		injectChannelInternal(getChannel(a)).player = a;
 	}
 
@@ -217,31 +238,26 @@ public class TinyProtocol implements Listener {
 		return channelLookup.get(a.getUniqueId());
 	}
 
-	void uninjectChannel(final Channel channel) {
+	void uninjectChannel(Channel channel) {
 		channel.eventLoop().execute(() -> {
 			channel.pipeline().remove(handler);
 		});
 	}
 
-	protected void close() {
+	void close() {
 		plugin.getServer().getOnlinePlayers().stream().forEach((player) -> {
 			uninjectChannel(getChannel(player));
 		});
 		unregisterChannelHandler();
 	}
 
-	@EventHandler()
+	@EventHandler(priority = EventPriority.LOWEST)
 	void join(PlayerJoinEvent e) {
 		injectPlayer(e.getPlayer());
 	}
 
-	void out(Player a, Object b) {
-	}
-
-	void in(Player a, Object b) {
-	}
-
 	class PacketInterceptor extends ChannelDuplexHandler {
+		
 		public volatile Player player;
 
 		@Override
@@ -250,9 +266,18 @@ public class TinyProtocol implements Listener {
 			for (RegisteredPacket listener : PacketHandlerList.getAllRegisteredPacketListeners())
             {
                 if (!listener.getType().name().equals(msg.getClass().getSimpleName())) continue;
-                PacketEvent packet = new ClassAccess(listener.getParentClass()).newInstance(0, player, msg);
-                listener.callEvent(packet);
-                if (packet.isCancelled() || packet.getPacket() == null) 
+                PacketEvent packet = listener.getAccessor().newInstance(0, player, ctx.channel(), msg);
+                try
+                {
+                    listener.callEvent(packet);
+                }
+                catch(Exception e)
+                {
+                	plugin.log("&c[TinyProtocol] Problem when overwrite object - &echannel read&c.");
+                	e.printStackTrace();
+                	return;
+                }
+                if (packet.isCancelled() || msg == null) 
                 	return;
 
             }
@@ -265,9 +290,18 @@ public class TinyProtocol implements Listener {
 			for (RegisteredPacket listener : PacketHandlerList.getAllRegisteredPacketListeners())
             {
                 if (!listener.getType().name().equals(msg.getClass().getSimpleName())) continue;
-                PacketEvent packet = new ClassAccess(listener.getParentClass()).newInstance(0, player, msg);
-                listener.callEvent(packet);
-                if (packet.isCancelled() || packet.getPacket() == null) 
+                PacketEvent packet = listener.getAccessor().newInstance(0, player, ctx.channel(), msg);
+                try
+                {
+                    listener.callEvent(packet);
+                }
+                catch(Exception e)
+                {
+                	plugin.log("&c[TinyProtocol] Problem when overwrite object - &echannel write&c.");
+                	e.printStackTrace();
+                	return;
+                }
+                if (packet.isCancelled() || msg == null) 
                 	return;
 
             }

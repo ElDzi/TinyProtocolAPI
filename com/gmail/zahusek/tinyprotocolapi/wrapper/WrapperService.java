@@ -12,30 +12,30 @@ import static org.bukkit.Bukkit.getPlayerExact;
 import static org.bukkit.Bukkit.getServer;
 import static org.bukkit.Bukkit.getOnlineMode;
 
-public class WrapperService {
+public abstract class WrapperService {
 	
-	private static final ClassAccess fa = new ClassAccess("{obc}.entity.CraftPlayer");
-	private static final ClassAccess fb = new ClassAccess("{obc}.CraftOfflinePlayer");
+	private static final ClassAccess craftonline = new ClassAccess("{obc}.entity.CraftPlayer");
+	private static final ClassAccess craftofffline = new ClassAccess("{obc}.CraftOfflinePlayer");
 	
-	private static final ClassAccess fc = new ClassAccess("{nms}.EntityPlayer");
+	private static final ClassAccess entity = new ClassAccess("{nms}.EntityPlayer");
 
-	private static final ClassAccess fd = new ClassAccess("{obc}.CraftServer");
-	private static final ClassAccess fe = new ClassAccess("{nms}.MinecraftServer");	
+	private static final ClassAccess craftserver = new ClassAccess("{obc}.CraftServer");
+	public static final ClassAccess minecraftserver = new ClassAccess("{nms}.MinecraftServer");	
+	public static final Object server = craftserver.invoke(getServer(), "getServer");
 	
-	private static final boolean ff = getOnlineMode();
-	
-	public static GameProfile getPrfile (String profile)
+	private static final boolean mode = getOnlineMode();
+
+	public static GameProfile getProfile (String name)
 	{
-		Player online = getPlayerExact(profile);
+		Player online = getPlayerExact(name);
 	    @SuppressWarnings("deprecation")
-	    GameProfile gprofile = online != null ? fc.invoke(fa.invoke(online, "getHandle"), "getProfile"): fb.invoke(getOfflinePlayer(profile), "getProfile");
-	    if(!ff) 
-	    	return gprofile;
-	    if (getFirst(gprofile.getProperties().get("textures"), null) == null)
+	    GameProfile profile = online != null ? entity.invoke(craftonline.invoke(online, "getHandle"), "getProfile"): craftofffline.invoke(getOfflinePlayer(name), "getProfile");
+	    if(!mode) return profile;
+	    if (getFirst(profile.getProperties().get("textures"), null) == null)
 	    {
-	    	MinecraftSessionService service = fe.get(fd.invoke(getServer(), "getServer"), MinecraftSessionService.class, 0);
-	    	gprofile = service.fillProfileProperties(gprofile, true);
+	    	MinecraftSessionService service = minecraftserver.get(server, MinecraftSessionService.class, 0);
+	    	profile = service.fillProfileProperties(profile, true);
 	    }
-	    return gprofile;
+	    return profile;
 	}
 }

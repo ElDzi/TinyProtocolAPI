@@ -6,5 +6,4 @@ public enum Preference
 	HIGH, 
 	NORMAL, 
 	LOW; 
-	
 }

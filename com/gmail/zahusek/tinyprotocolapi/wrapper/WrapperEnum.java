@@ -1,12 +1,30 @@
 package com.gmail.zahusek.tinyprotocolapi.wrapper;
 
+import java.util.Map;
+
 import com.gmail.zahusek.tinyprotocolapi.asm.reflection.ClassAccess;
+import com.google.common.collect.MapMaker;
 
 public abstract class WrapperEnum 
 {
-	private static final ClassAccess fa = new ClassAccess("{nms}.PacketPlayOutPlayerInfo$EnumPlayerInfoAction");
-	private static final ClassAccess fb = new ClassAccess("{nms}.WorldSettings$EnumGamemode");
-	private static final ClassAccess fc = new ClassAccess("{nms}.PacketPlayOutTitle$EnumTitleAction");
+	public static final ClassAccess infoActionAccess = new ClassAccess("{nms}.PacketPlayOutPlayerInfo$EnumPlayerInfoAction");
+	private final static Map<Integer, Object> info = new MapMaker().weakValues().makeMap();
+	
+	public static final ClassAccess gameTypeAccess = new ClassAccess("{nms}.WorldSettings$EnumGamemode");
+	private final static Map<Integer, Object> type = new MapMaker().weakValues().makeMap();
+
+	public static final ClassAccess titleActionAccess = new ClassAccess("{nms}.PacketPlayOutTitle$EnumTitleAction");
+	private final static Map<Integer, Object> title = new MapMaker().weakValues().makeMap();
+	
+	static
+	{
+		for(int i = 0; i < InfoAction.values().length; i++)
+			info.put(i, infoActionAccess.getEnum(i));
+		for(int i = 0; i < GameType.values().length; i++)
+			type.put(i, gameTypeAccess.getEnum(i));
+		for(int i = 0; i < TitleAction.values().length; i++)
+			title.put(i, titleActionAccess.getEnum(i));
+	}
 	
 	public enum InfoAction 
 	{
@@ -20,7 +38,7 @@ public abstract class WrapperEnum
 	    {return values()[a.ordinal()];}
 	    
 	    public Object getHadle(){
-	    	return fa.getEnum(ordinal());
+	    	return info.get(ordinal());
 	    }
 	}
 	
@@ -36,7 +54,7 @@ public abstract class WrapperEnum
 	    {return values()[a.ordinal()];}
 	    
 	    public Object getHadle(){
-	    	return fb.getEnum(ordinal());
+	    	return type.get(ordinal());
 	    }
 	}
 	
@@ -52,7 +70,7 @@ public abstract class WrapperEnum
 	    {return values()[a.ordinal()];}
 	    
 	    public Object getHadle(){
-	    	return fc.getEnum(ordinal());
+	    	return title.get(ordinal());
 	    }
 	}
 

@@ -1,23 +1,31 @@
 package com.gmail.zahusek.tinyprotocolapi.listener;
 
+import io.netty.channel.Channel;
+
 import org.bukkit.entity.Player;
 import org.bukkit.event.Cancellable;
 
 public abstract class PacketEvent implements Cancellable
 {
-	private final Player player;
-	private final Object handle;
+	public final Player player;
+	public final Channel channel;
+	public final Object handle;
 	private boolean c;
 	
-	public PacketEvent(Player player, Object handle)
+	public PacketEvent(Player player, Channel channel, Object handle)
 	{
 		this.player = player;
+		this.channel = channel;
 		this.handle = handle;
 		c = false;
 	}
 	
 	public Player getPlayer() {
 		return player;
+	}
+	
+	public Channel getChannel() {
+		return channel;
 	}
 	 
 	public Object getPacket() {
@@ -33,4 +41,6 @@ public abstract class PacketEvent implements Cancellable
 	public void setCancelled(boolean cancel) {
 		c = cancel;
 	}
+	
+	abstract public PacketHandlerList getPacketHandlerList();
 }

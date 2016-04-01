@@ -1,12 +1,9 @@
 package com.gmail.zahusek.tinyprotocolapi.api.tab;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
-import java.util.Iterator;
-import java.util.List;
-
-import org.bukkit.plugin.Plugin;
+import java.util.LinkedList;
+import java.util.UUID;
 
 import com.gmail.zahusek.tinyprotocolapi.TinyProtocolAPI;
 import com.gmail.zahusek.tinyprotocolapi.api.Preference;
@@ -18,255 +15,234 @@ import com.gmail.zahusek.tinyprotocolapi.wrapper.WrapperEnum.InfoAction;
 import com.gmail.zahusek.tinyprotocolapi.wrapper.WrapperInfoData;
 import com.mojang.authlib.GameProfile;
 
-import static java.util.UUID.fromString;
-import static java.lang.String.format;
-
 public class TabHolder implements TabModify 
 {
-	final int x, y;
-	final GameProfile[][] a;
-	final GameType b;
-	final String c, d;//default msg, default texture
+	final int x = 4, y = 20;
+	final GameProfile[][] profile = new GameProfile[x][y];
+	final String uuid = "00000000-0000-%s-0000-000000000000";
+	final String token = "!@#$^*";
+	final GameType gamemode = GameType.NOT_SET;
 	
-	Preference e;
-	Class<? extends Plugin> f;
-	boolean g;//exist
+	Class<?> plugin;
+	Preference priority;
+	boolean exist = false;
 	
-	String h, i;//header, footer
-	String[][] j, k, l;//msg, texture, utexture
-	int[][] m, n;//ping, uping
+	String[][] message = new String[x][y];
+	boolean[][] xmessage = new boolean[x][y];
+	
+	int[][] signal = new int[x][y];
+	boolean[][] xsignal = new boolean[x][y];
+	
+	String[][] texture = new String[x][y];
+	boolean[][] xtexture = new boolean[x][y];
+	
+	String _message = "";
+	int _signal = 0;
+	String _texture = "MHF_Question";
+	
+	final PacketPlayerInfo remove = new PacketPlayerInfo(InfoAction.REMOVE_PLAYER);
 
-	public TabHolder() {
-		x = 4;
-		y = 20;
-		a = new GameProfile[x][y];
-		b = GameType.NOT_SET;
-		c = "";
-		d = "MHF_Question";
-		
-		e = Preference.LOW;
-		f = TinyProtocolAPI.class;
-		g = false;
-		
-		h = "";
-		i = "";
-		
-		j = new String[x][y];// msg
-		k = new String[x][y];// texture
-		l = new String[x][y];// texture ultimate
-		m = new int[x][y];// ping
-		n = new int[x][y];// ping ultimate
-		String o = "00000000-0000-%s-0000-000000000000";
-		String p = "!@#$^*";
-		for (int x = 0; x < this.x; x++) 
+	final PacketHeaderFooter hnf = new PacketHeaderFooter();
+	
+	TabHolder() 
+	{
+		final LinkedList<WrapperInfoData> xdefault = new LinkedList<>();
+		for(int x = 0; x < this.x; x++)
 		{
-			for (int y = 0; y < this.y; y++) 
+			for(int y = 0; y < this.y; y++)
 			{
-				String q = mc(x) + mc(y);
-				a[x][y] = new GameProfile(fromString(format(o, q)), p + q);
+				String idx = digit(x);
+				String idy = digit(y);
+				GameProfile profile = this.profile[x][y] = new GameProfile(UUID.fromString(String.format(uuid, idx + idy)), token + idx + token + idy);
+				xdefault.add(new WrapperInfoData(profile, _signal, gamemode, _message));
 			}
 		}
-		va();
+		remove.addAll(xdefault);
+		reset();
 	}
+	
+	protected Packet[] update()
+	{
+		final PacketPlayerInfo add = new PacketPlayerInfo(InfoAction.ADD_PLAYER);
+		final PacketPlayerInfo display = new PacketPlayerInfo(InfoAction.UPDATE_DISPLAY_NAME);
+		final PacketPlayerInfo latency = new PacketPlayerInfo(InfoAction.UPDATE_LATENCY);
 
-	Collection<Packet> ma() {
-		PacketHeaderFooter a = new PacketHeaderFooter();
-		PacketPlayerInfo b = new PacketPlayerInfo(InfoAction.ADD_PLAYER);
-		PacketPlayerInfo c = new PacketPlayerInfo(InfoAction.UPDATE_DISPLAY_NAME);
-		PacketPlayerInfo d = new PacketPlayerInfo(InfoAction.UPDATE_LATENCY);
-
-		GameType e = this.b;
-		String f = this.c;
-		for (int x = 0; x < 4; x++) {
-			for (int y = 0; y < 20; y++) {
-				GameProfile h = this.a[x][y];
-				String i = this.k[x][y];
-				int j = this.m[x][y];
-				
-				if (!this.l[x][y].equals(i))
+		for(int x = 0; x < this.x; x++)
+		{
+			for(int y = 0; y < this.y; y++)
+			{
+				WrapperInfoData data = new WrapperInfoData(profile[x][y], signal[x][y], gamemode, message[x][y]);
+				if(!exist || !xtexture[x][y])
 				{
-					WrapperInfoData z = new WrapperInfoData(h, 0, e, f);
-					z.setTexture(this.l[x][y] = i);
-					b.addInfo(z);
+					data.setTexture(texture[x][y]);
+					add.add(data);
+					xtexture[x][y] = true;
 				}
-				if (this.n[x][y] != j)
-					d.addInfo(new WrapperInfoData(h, this.n[x][y] = j, e, f));
-				c.addInfo(new WrapperInfoData(h, 0, e, this.j[x][y]));
+				if(!xmessage[x][y])
+				{
+					display.add(data);
+					xmessage[x][y] = true;
+				}
+				if(!xsignal[x][y])
+				{
+					latency.add(data);
+					xsignal[x][y] = true;
+				}
 			}
 		}
-		a.setHeader(h);
-		a.setFooter(i);
-		this.g = true;
-		return Arrays.asList(a, b, c, d);
+		exist = true;
+		return new Packet[] {add, display, latency};
 	}
-
-	Collection<Packet> mb() {
-		PacketHeaderFooter a = new PacketHeaderFooter();
-		PacketPlayerInfo b = new PacketPlayerInfo(InfoAction.REMOVE_PLAYER);
-		GameType c = this.b;
-		String d = this.c;
-
-		for (int x = 0; x < 4; x++) {
-			for (int y = 0; y < 20; y++) {
-				b.addInfo(new WrapperInfoData(this.a[x][y], 0, c, d));
-			}
-		}
-		a.setHeader(d);
-		a.setFooter(d);
-		this.g = false;
-		return Arrays.asList(a, b);
+	
+	protected Packet[] remove()
+	{
+		reset();
+		return new Packet[] {hnf, remove};
 	}
 
 	@Override
-	public void setMessage(int x, int y, String display) {
-		j[x][y] = display == null ? c : display;
+	public void setMessage(int x, int y, String message) {
+		if(this.message[x][y].equals(message)) return;
+		this.message[x][y] = message;
+		xmessage[x][y] = false;
 	}
 
 	@Override
 	public void setTexture(int x, int y, String texture) {
-		k[x][y] = texture == null ? d : texture;
+		if(this.texture[x][y].equals(texture))return;
+		this.texture[x][y] = texture;
+		xtexture[x][y] = false;
 	}
 	
+	@Override
+	public void setSignal(int x, int y, int signal) 
+	{
+		if(this.signal[x][y] == signal) return;
+		this.signal[x][y] = signal;
+		xsignal[x][y] = false;
+	}
+
 	@Override
 	public void setTexture(String texture) {
-		String a = texture == null ? d : texture;
-		for (int x = 0; x < 4; x++)
-			for (int y = 0; y < 20; y++)
-				k[x][y] = a;
+		for(int x = 0; x < this.x; x++)
+			for(int y = 0; y < this.y; y++)
+				setTexture(x, y, texture);
 	}
 
 	@Override
-	public void setSignal(int x, int y, int ping) {
-		m[x][y] = ping;
-	}
-	
-	@Override
-	public void setSignal(int ping) {
-		for (int x = 0; x < 4; x++)
-			for (int y = 0; y < 20; y++)
-				m[x][y] = ping;
+	public void setSignal(int signal) {
+		for(int x = 0; x < this.x; x++)
+			for(int y = 0; y < this.y; y++)
+				setSignal(x, y, signal);
 	}
 
 	@Override
-	public void setHeader(List<String> head) {
-		Iterator<String> a = head.iterator();
-		String b = a.next();
-		String c = b == null ? this.c : b;
-		while (a.hasNext())
-			c += '\n' + a.next();
-		h = c;
+	public void set(int x, int y, String message, String texture) {
+		setMessage(x, y, message);
+		setTexture(x, y, texture);
+		
 	}
+
 	@Override
-	public void setFooter(List<String> foot) {
-		Iterator<String> a = foot.iterator();
-		String b = a.next();
-		String c = b == null ? this.c : b;
-		while (a.hasNext())
-			c += '\n' + a.next();
-		i = c;
+	public void set(int x, int y, String message, int signal) {
+		setMessage(x, y, message);
+		setSignal(x, y, signal);
+	}
+
+	@Override
+	public void set(int x, int y, String message, String texture, int signal) {
+		setMessage(x, y, message);
+		setSignal(x, y, signal);
+		setTexture(x, y, texture);
+	}
+
+	@Override
+	public void setHeader(Collection<String> header) {
+		if(header == null || header.isEmpty()) 
+			return;
+		String[] head = header.toArray(new String[header.size()]);
+		StringBuilder text = new StringBuilder();
+		text.append(head[0] == null ?  _message : head[0]);
+		for(int i = 1; i < head.length; i++)
+			text.append("\n" + head[i]);
+		hnf.setHeader(text.toString());
+	}
+
+	@Override
+	public void setFooter(Collection<String> footer) {
+		if(footer == null || footer.isEmpty()) 
+			return;
+		String[] foot = footer.toArray(new String[footer.size()]);
+		StringBuilder text = new StringBuilder();
+		text.append(foot[0] == null ?  _message : foot[0]);
+		for(int i = 1; i < foot.length; i++)
+			text.append("\n" + foot[i]);
+		hnf.setFooter(text.toString());
+	}
+
+	@Override
+	public void set(Collection<String> header, Collection<String> footer) {
+		setHeader(header);
+		setFooter(footer);
 	}
 
 	@Override
 	public String getMessage(int x, int y) {
-		return j[x][y];
+		return message[x][y];
 	}
 
 	@Override
 	public String getTexture(int x, int y) {
-		return k[x][y];
+		return texture[x][y];
 	}
 
 	@Override
 	public int getSignal(int x, int y) {
-		return m[x][y];
+		return signal[x][y];
 	}
 
 	@Override
-	public List<String> getHeader() {
-		ArrayList<String> a = new ArrayList<>();
-		StringBuilder b = new StringBuilder();
-		for (char c : h.toCharArray()) {
-			switch (c) {
-				case '\n' :
-					a.add(b.toString());
-					b = new StringBuilder();
-					break;
-				default :
-					b.append(c);
-					break;
-			}
-
-		}
-		a.add(b.toString());
-		return a;
+	public ArrayList<String> getHeader() {
+		ArrayList<String> head = new ArrayList<>();
+		String[] text = hnf.getHeader().split("\n");
+		for(String line : text)
+			head.add(line);
+		return head;
 	}
 
 	@Override
-	public List<String> getFooter() {
-		ArrayList<String> a = new ArrayList<>();
-		StringBuilder b = new StringBuilder();
-		for (char c : i.toCharArray()) {
-			switch (c) {
-				case '\n' :
-					a.add(b.toString());
-					b = new StringBuilder();
-					break;
-				default :
-					b.append(c);
-					break;
-			}
-
-		}
-		a.add(b.toString());
-		return a;
-	}
-
-	@Override
-	public void set(int x, int y, String display, String texture) {
-		setMessage(x, y, display);
-		setTexture(x, y, texture);
-	}
-
-	@Override
-	public void set(int x, int y, String display, int ping) {
-		setMessage(x, y, display);
-		setSignal(x, y, ping);
-
-	}
-
-	@Override
-	public void set(int x, int y, String display, String texture, int ping) {
-		setMessage(x, y, display);
-		setTexture(x, y, texture);
-		setSignal(x, y, ping);
-	}
-
-	@Override
-	public void set(List<String> head, List<String> foot) {
-		setHeader(head);
-		setFooter(foot);
-
-	}
-
-	void va() {
-		e = Preference.LOW;
-		f = TinyProtocolAPI.class;
-		for (int x = 0; x < this.x; x++) {
-			for (int y = 0; y < this.y; y++) {
-				j[x][y] = c;
-				k[x][y] = d;
-				l[x][y] = c;
-				m[x][y] = 0;
-				n[x][y] = 0;
-			}
-		}
-	}
-
-	void vb(Preference a, Class<? extends Plugin> b) {
-		e = a;
-		f = b;
+	public ArrayList<String> getFooter() {
+		ArrayList<String> foot = new ArrayList<>();
+		String[] text = hnf.getFooter().split("\n");
+		for(String line : text)
+			foot.add(line);
+		return foot;
 	}
 	
-    String mc (int a)
-    {return a > 9 ? "" +  a : "0" + a;}
+	protected void reset()
+	{
+		plugin = TinyProtocolAPI.class;
+		priority = Preference.LOW;
+		for(int x = 0; x < this.x; x++)
+		{
+			for(int y = 0; y < this.y; y++)
+			{
+				message[x][y] = _message;
+				signal[x][y] = _signal;
+				texture[x][y] = _texture;
+			}
+		}
+		hnf.setFooter(_message);
+		hnf.setHeader(_message);
+		exist = false;
+	}
+	
+	protected void takeOver(Class<?> a, Preference b)
+	{
+		this.plugin = a;
+		this.priority = b;
+	}
+	
+    String digit (int i)
+    {return i > 9 ? "" + i : "0" + i;}
 }
