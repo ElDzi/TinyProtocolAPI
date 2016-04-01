@@ -1,6 +1,9 @@
 name: TinyProtocolAPI
 main: com.gmail.zahusek.tinyprotocolapi.TinyProtocolAPI
-version: 4.0 (Optimization!)
+version: 4.5 (Packet Update)
 author: ZahuseK
 website: https://www.spigotmc.org/resources/tinyprotocolapi.9787/
 description: TinyProtocolAPI - your small library.
+commands:
+    tinyprotocolapi:
+        description: Command for test
