@@ -4,7 +4,6 @@ import org.bukkit.entity.Player;
 
 import com.gmail.zahusek.tinyprotocolapi.TinyProtocol;
 import com.gmail.zahusek.tinyprotocolapi.TinyProtocolAPI;
-import com.gmail.zahusek.tinyprotocolapi.packet.PacketChat;
 import com.gmail.zahusek.tinyprotocolapi.packet.PacketTitle;
 
 import static com.gmail.zahusek.tinyprotocolapi.wrapper.WrapperEnum.TitleAction.*;
