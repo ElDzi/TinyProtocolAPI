@@ -37,11 +37,12 @@ public abstract class TabAPI
     	TabHolder hold = holder(player);
 		if(hold.priority.compareTo(priority) < 0)
 			return;
-        if (!hold.plugin.isAssignableFrom(plugin)) {
-        }
+        if (hold.plugin.isAssignableFrom(plugin)) {
+        
 		api.call(hold);
 		manager.sendAbstractPacket(player, hold.update());
 		hold.takeOver(plugin, priority);
+		}
 	}
 	
 	public static void refresh(Class<? extends Plugin> plugin, Player player, SettingAPI<TabModify> modify) {
