@@ -49,10 +49,5 @@ public abstract class TitleAPI
 		if(player == null) throw new IllegalArgumentException("Player cannot be null !");
 		fb.sendAbstractPacket(player, new PacketTitle(CLEAR, ""));
 	}
-	
-	public static void hotbar(Player player, String msg)
-	{     	
-		if(player == null) throw new IllegalArgumentException("Player cannot be null !");
-		new PacketChat(msg, (byte) 2); 
-	}
+
 }
