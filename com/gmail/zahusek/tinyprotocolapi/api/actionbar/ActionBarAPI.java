@@ -15,4 +15,11 @@ public abstract class ActionBarAPI {
 		PacketChat packet = new PacketChat(msg, (byte) 2); 
 		fb.sendAbstractPacket(player, packet);
 	}
+	
+	public static void clear(Player player)
+	{
+		if(player == null) throw new IllegalArgumentException("Player cannot be null !");
+		PacketChat packet = new PacketChat("",(byte) 2);
+		fb.sendAbstractPacket(player, packet);
+	}
 }
