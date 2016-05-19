@@ -12,6 +12,7 @@ public abstract class ActionBarAPI {
 	public static void hotbar(Player player, String msg)
 	{     	
 		if(player == null) throw new IllegalArgumentException("Player cannot be null !");
-		new PacketChat(msg, (byte) 2); 
+		PacketChat packet = new PacketChat(msg, (byte) 2); 
+		fb.sendPacket(player, packet);
 	}
 }
